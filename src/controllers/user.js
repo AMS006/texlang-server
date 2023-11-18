@@ -5,6 +5,7 @@ const validator = require('validator')
 const { db } = require('../../firebase');
 const sendEmail = require('../utils/sendEmail');
 const generateToken = require('../utils/generateToken');
+const { USER_JWT_EXPIRE_DAYS } = require('../Constants');
 
 
 exports.loginUser = async(req,res) =>{
@@ -47,7 +48,7 @@ exports.loginUser = async(req,res) =>{
             companyName: userData?.companyName,
         }
         
-        const token = generateToken(user,'2d')
+        const token = generateToken(user,USER_JWT_EXPIRE_DAYS)
         
         return res.status(200).json({user,token})
     } catch (error) {

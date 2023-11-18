@@ -41,16 +41,18 @@ exports.updateProjectStatus = async(req,res) =>{
         const projectData = (await projectRef.get()).data();
         const email = projectData?.user?.email;
 
+        const batch = db.batch();
         const end_date = admin.firestore.FieldValue.serverTimestamp()
-        await projectRef.update({status:"Completed",end_date})
+        batch.update(projectRef,{status:"Completed",end_date})
         
         if(email){
             const html = `Dear Customer,
             <br />
-            <p> Please note, the work you had uploaded on <a href="https://texlang-client-qjvrxcjtna-uc.a.run.app" target="_blank"/>Texlang Enterprise Portal</a> for the project ${projectData?.name} has been completed. Please login to your account to download the completed work. </p>`
+            <p> Please note, the work you had uploaded on <a href="https://texlang-client-qjvrxcjtna-uc.a.run.app/" target="_blank">Texlang</a>. for the project ${projectData?.name} has been completed. Please login to your account to download the completed work. </p>`
             await sendEmail(email,"Texlang Project Completed", html)
         }
 
+        await batch.commit();
         return res.status(200).json({message:"Status Updated"})
     } catch (error) {
         console.log("Update Project Status Error: ", error.message);
@@ -60,6 +62,8 @@ exports.updateProjectStatus = async(req,res) =>{
 exports.getPaymentPendingProjects = async(req,res)=>{
     try {
         const {companyId,start_date,end_date} = req.query;
+        const endDate = new Date(end_date);
+        endDate.setHours(23,59,59,999);
         if(!isValidDate(start_date) || !isValidDate(end_date)){
             return res.status(400).json({message:"Invalid Date Format"})
         }
@@ -71,6 +75,7 @@ exports.getPaymentPendingProjects = async(req,res)=>{
         .where('companyId', '==', companyId)
         .where('paymentSuccess', '==', false)
         .where('start_date', '>=', new Date(start_date))
+        .where('start_date', '<=', endDate)
 
         const projectsSnapshot = await projectsQuery.get();
         if(projectsSnapshot.empty)
@@ -93,8 +98,7 @@ exports.getPaymentPendingProjects = async(req,res)=>{
             }
         })
         
-        const filteredProjects = projects.filter((project)=>project.end_date <= new Date(end_date))
-        return res.status(200).json({projects:filteredProjects})
+        return res.status(200).json({projects})
     } catch (error) {
         console.log("Payment Pending Project Error", error.message);
         return res.status(500).json({ message: "Something went wrong" });

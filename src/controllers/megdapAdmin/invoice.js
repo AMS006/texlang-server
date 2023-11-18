@@ -1,10 +1,13 @@
 const { db } = require("../../../firebase");
+const { CGST_RATE, SGST_RATE } = require("../../Constants");
 const { isValidDate } = require("../../helper");
 
 exports.getGenerateInvoiceWorks = async(req,res) =>{
     try {
         const {companyId,start_date,end_date} = req.query;
-       
+        const endDate = new Date(end_date);
+        endDate.setHours(23,59,59,999);
+
         if(!isValidDate(start_date) || !isValidDate(end_date)){
             return res.status(400).json({message:"Invalid Date Format"})
         }
@@ -16,6 +19,7 @@ exports.getGenerateInvoiceWorks = async(req,res) =>{
         let workQuery = worksRef
         .where('companyId', '==', companyId)
         .where('start_date', '>=', new Date(start_date))
+        .where('start_date', '<=', endDate);
 
         const workSnapshot = await workQuery.get();
 
@@ -30,35 +34,32 @@ exports.getGenerateInvoiceWorks = async(req,res) =>{
             const workDoc = doc.data();
             
             const start_date_work = new Date(workDoc.start_date.seconds * 1000 + workDoc.start_date._nanoseconds / 1000000);
-            const end_date_work = new Date(workDoc.end_date.seconds * 1000 + workDoc.end_date._nanoseconds / 1000000);
 
-            if(end_date_work <= new Date(end_date)){
-                workDoc.targetLanguage.forEach((language,idx) =>{
-                    if(!language?.invoiceGenerated){
-                        let langRate = 3.00;
-                        let sourceLanguage = String(workDoc.sourceLanguage).toLowerCase();
-                        let targetLanguage = String(language.lang).toLowerCase();
-
-                        if(languageRate && languageRate.hasOwnProperty(`${sourceLanguage}-${targetLanguage}`)){
-                            langRate = languageRate[`${sourceLanguage}-${targetLanguage}`]
-                        }
-                        const amount = workDoc.wordCount > 0 ? (langRate * workDoc.wordCount) : (langRate * workDoc.value)
-                        works.push({
-                            id,
-                            idx,
-                            fileName:workDoc?.name,
-                            wordCount:workDoc?.wordCount,
-                            amount,
-                            customerId:workDoc?.userEmail,
-                            projectName:workDoc?.projectName,
-                            createdAt:start_date_work,
-                            sourceLanguage,
-                            targetLanguage,
-                            cost:langRate
-                        })
+            workDoc.targetLanguage.forEach((language,idx) =>{
+                if(!language?.invoiceGenerated){
+                    let langRate = 3.00;
+                    let sourceLanguage = String(workDoc.sourceLanguage).toLowerCase();
+                    let targetLanguage = String(language.lang).toLowerCase();
+                    if(languageRate && languageRate.hasOwnProperty(`${sourceLanguage}-${targetLanguage}`)){
+                        langRate = languageRate[`${sourceLanguage}-${targetLanguage}`]
                     }
-                })
-            }
+                    const amount = workDoc.wordCount > 0 ? (langRate * workDoc.wordCount) : (langRate * workDoc.value)
+                    works.push({
+                        id,
+                        idx,
+                        fileName:workDoc?.name,
+                        wordCount:workDoc?.wordCount,
+                        amount,
+                        customerId:workDoc?.userEmail,
+                        projectName:workDoc?.projectName,
+                        createdAt:start_date_work,
+                        sourceLanguage,
+                        targetLanguage,
+                        cost:langRate
+                    })
+                }
+            })
+            
         })
         return res.status(200).json({works})
     } catch (error) {
@@ -153,17 +154,31 @@ exports.getApprovePendingInvoices = async (req, res) => {
     }
 }
 
-exports.approveInvoices = async(req,res) =>{
+exports.updateInvoiceStatus = async(req,res) =>{
     try {
-        const {id} = req.body
+        const {id} = req.params
+        const {status} = req.body;
         if(!id)
-            return res.status(400).json({message:"Invalid Request"})
-
+        return res.status(400).json({message:"Invalid Request"})
+    
         const invoiceRef = db.collection('invoices');
+        const batch = db.batch();
+        if(status === 'Cancelled'){
+            const invoiceData = (await invoiceRef.doc(id).get()).data();
+            const workRef = db.collection('works').doc(invoiceData.workId);
+            const workData = (await workRef.get()).data();
 
-        await invoiceRef.doc(id).update({status:"Approved"})
+            const updatedTargetLanguage = [...workData.targetLanguage];
+            updatedTargetLanguage[Number(invoiceData.workIndex)] = {
+                ...updatedTargetLanguage[Number(invoiceData.workIndex)],
+                invoiceGenerated: false,
+            };
+            batch.update(workRef,{targetLanguage:updatedTargetLanguage})
+        }
+        batch.update(invoiceRef.doc(id),{status});
+        await batch.commit();
 
-        return res.status(200).json({message:"Invoice Approved"})
+        return res.status(200).json({message:`Invoice ${status} Successfully`})
     } catch (error) {
         console.log("Approve Invoice Error: ", error.message);
         return res.status(500).json({ message: "Something went wrong" });
@@ -191,20 +206,22 @@ exports.getInvoiceDetails = async(req,res) =>{
             return res.status(400).json({message:"Invalid Request"})
 
         const invoiceDate = new Date(invoiceData.createdAt.seconds * 1000 + invoiceData.createdAt._nanoseconds / 1000000)
-        const centralTaxAmount = (invoiceData.amount * 9.00) / 100;
-        const stateTaxAmount = (invoiceData.amount * 9.00) / 100;
+        const centralTaxAmount = (invoiceData.amount * CGST_RATE) / 100;
+        const stateTaxAmount = (invoiceData.amount * SGST_RATE) / 100;
         const totalTaxAmount = centralTaxAmount + stateTaxAmount;
         const grandTotal = Number(invoiceData.amount + totalTaxAmount).toFixed(0);
+
         const invoiceDetails = {
             id:invoiceRef.id,
             invoiceNumber:invoiceData.invoiceNumber,
             companyName:invoiceData.companyName,
             wordCount:workData.wordCount,
             amount:invoiceData.amount,
+            status:invoiceData.status,
             email:invoiceData.email,
             invoiceDate,
-            centralTaxRate: 9.00,
-            stateTaxRate: 9.00,
+            centralTaxRate: CGST_RATE,
+            stateTaxRate: SGST_RATE,
             centralTaxAmount,
             stateTaxAmount,
             totalTaxAmount,
@@ -214,5 +231,34 @@ exports.getInvoiceDetails = async(req,res) =>{
         return res.status(200).json({invoiceDetails})
     } catch (error) {
         
+    }
+}
+
+exports.getAllInvoices = async(req,res) =>{
+    try {
+        const invoiceRef = db.collection('invoices');
+        const invoiceSnapshot = await invoiceRef.get();
+
+        if(invoiceSnapshot.empty)
+            return res.status(200).json({invoices:[]})
+
+        const invoices = invoiceSnapshot.docs.map((doc) =>{
+            const invoiceData = doc.data();
+            const invoiceId = doc.id;
+
+            const invoiceDate = new Date(invoiceData.createdAt.seconds * 1000 + invoiceData.createdAt._nanoseconds / 1000000);
+
+            return {
+                id:invoiceId,
+                invoiceNumber:invoiceData.invoiceNumber,
+                createdAt:invoiceDate,
+                companyName:invoiceData.companyName,
+                status:invoiceData.status
+            }
+        })
+        return res.status(200).json({invoices})
+    } catch (error) {
+        console.log("Get All Invoices Error: ", error.message);
+        return res.status(500).json({ message: "Something went wrong" });
     }
 }

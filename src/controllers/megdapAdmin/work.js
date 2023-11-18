@@ -115,6 +115,7 @@ exports.getUserWorksForUpdate = async(req,res)=>{
         const workSnapshot = await workQuery.get();
         if(workSnapshot.empty)
             return res.status(200).json({works:[]})
+        
         const works = workSnapshot.docs.map((doc)=>{
             const id = doc.id;
             const workDoc = doc.data();
@@ -137,6 +138,9 @@ exports.getUserWorksForUpdate = async(req,res)=>{
 exports.getWorkForCompanyBilling = async(req,res)=>{
     try {
         const {companyId,start_date,end_date} = req.query;
+        const endDate = new Date(end_date);
+        endDate.setHours(23,59,59,999);
+
         if(!isValidDate(start_date) || !isValidDate(end_date)){
             return res.status(400).json({message:"Invalid Date Format"})
         }
@@ -148,6 +152,7 @@ exports.getWorkForCompanyBilling = async(req,res)=>{
         let workQuery = projectsRef
         .where('companyId', '==', companyId)
         .where('start_date', '>=', new Date(start_date))
+        .where('start_date', '<=', endDate);
 
         const workSnapshot = await workQuery.get();
         if(workSnapshot.empty)
@@ -184,8 +189,7 @@ exports.getWorkForCompanyBilling = async(req,res)=>{
                 languageRates
             }
         })
-        const filteredWorks = works.filter((project)=>project.end_date <= new Date(end_date))
-        return res.status(200).json({works:filteredWorks})
+        return res.status(200).json({works})
     } catch (error) {
         console.log('Get Work For Company Billing Error: ',error.message)
         return res.status(500).json({message:"Something went wrong"})

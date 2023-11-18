@@ -22,7 +22,7 @@ exports.addProject = async(req,res) =>{
         const userRef =  db.collection('users').doc(user.id)
         const projectRef = db.collection('projects').doc()
         const jobWiseDataRef = db.collection('metadata').doc(`${user.companyId}_jobWiseData`)
-
+        
          const userDetail = {
             email: user.email,
             name:user.name

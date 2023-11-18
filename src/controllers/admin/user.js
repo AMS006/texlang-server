@@ -8,6 +8,7 @@ const sendEmail = require('../../utils/sendEmail')
 exports.registerUser = async(req,res) =>{
     try {
         const { firstName, lastName, email, password } = req.body
+        
         const user = req.user;
         if(!user)
             return res.status(402).json({ message:"Unauthorized"})
@@ -28,27 +29,32 @@ exports.registerUser = async(req,res) =>{
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password,salt)
 
+        const batch = db.batch();
         const date = admin.firestore.FieldValue.serverTimestamp()
-        await db.collection("users").add(
-            {
-                firstName,
-                lastName,
-                email,
-                companyId: user?.companyId,
-                companyName: user?.companyName,
-                password: hashedPassword,
-                totalBilledAmount: 0,
-                role: "user",
-                status: true,
-                createdAt: date
-            })
+        const userRef = db.collection('users').doc();
+        const userData = {
+            firstName,
+            lastName,
+            email,
+            companyId: user?.companyId,
+            companyName: user?.companyName,
+            password: hashedPassword,
+            totalBilledAmount: 0,
+            role: "user",
+            status: true,
+            createdAt: date
+        }
+        batch.set(userRef,userData);
+
         const html = `<p>Dear Customer,</p>
             <br />
-            <p>An account has been created for you on <a href="https://texlang-client-qjvrxcjtna-uc.a.run.app/" target="_blank">Texlang</a>. Please use the following credentials to login.</p>
+            <p>An account has been created for you on <a href="https://texlang-client-qjvrxcjtna-uc.a.run.app/" target="_blank">Texlang</a>. Please use the below credentials to login.</p>
             <p>Email: ${email}</p>
             <p>Password: ${password}</p>`
         const subject = 'Texlang Account Created'
         await sendEmail(email,subject,html)
+
+        await batch.commit();
         return res.status(201).json({message:"User Registered"})
     } catch (error) {
         console.log("User Registration : ", error.message)

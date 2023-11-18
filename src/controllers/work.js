@@ -2,6 +2,7 @@ const {filesize} = require('filesize')
 
 const { db } = require('../../firebase');
 const { countWords } = require('../helper');
+const { DEFAULT_LANGUAGE_RATE } = require('../Constants');
 
 exports.uploadWork = async(req,res) =>{
     try {
@@ -18,7 +19,8 @@ exports.uploadWork = async(req,res) =>{
         let value = 0, wordCount = 0;
         
         wordCount = await countWords(file)
-        const remoteFileName = `${user.companyName.split(' ').join('_')}/${user.id}/${req.body.timeStamp}/${req.body.name}`;
+        const date = new Date(Number(req.body.timeStamp))
+        const remoteFileName = `${user.companyName.split(' ').join('_')}/${user.id}/${date}/${req.body.name}`;
 
  
         const fileName = file.originalname;
@@ -64,8 +66,8 @@ exports.getWorksData = async(works,projectId,projectName,companyId) =>{
                     cost += (languageRateData[`${sourceLanguage}-${targetLanguage}`] * work.value)
             }
             else{
-                work.wordCount > 0 ? cost += (3 * wordCount) :
-                cost += (3 * work.value)
+                work.wordCount > 0 ? cost += (DEFAULT_LANGUAGE_RATE * wordCount) :
+                cost += (DEFAULT_LANGUAGE_RATE * work.value)
             }
         })
         

@@ -14,7 +14,7 @@ require('dotenv').config()
 const app = express();
 const PORT = process.env.PORT || 4000
 
-const whitelist = ['https://texlang-client-qjvrxcjtna-uc.a.run.app','http://localhost', 'http://localhost:5173'];
+const whitelist = ['https://texlang-client-qjvrxcjtna-uc.a.run.app','http://localhost:5174', 'http://localhost:5173'];
 
 const corsOptions = {
     origin: function (origin, callback) {

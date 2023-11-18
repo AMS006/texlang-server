@@ -1,5 +1,6 @@
 const { db,admin } = require("../../../firebase")
 const bcrypt = require('bcryptjs')
+const sendEmail = require("../../utils/sendEmail")
 
 exports.addNewCompany = async (req, res) => {
     try {
@@ -42,10 +43,23 @@ exports.addNewCompany = async (req, res) => {
                 totalBilledAmount: 0,
                 createdAt: admin.firestore.FieldValue.serverTimestamp()
             })
-            
+            const html = 
+            `<p>Dear Customer,</p>
+                <br />
+                <p>An account has been created for you on <a href="https://texlang-client-qjvrxcjtna-uc.a.run.app/" target="_blank">Texlang</a>. Please use the following credentials to login.</p>
+                <p>Email: ${adminEmail}</p>
+                <p>Password: ${adminPassword}</p>`
+    
+            const subject = 'Texlang Account Created'
+            await sendEmail(adminEmail,subject,html)
+            const companyData = {
+                id: companyDoc.id,
+                name: companyName,
+            }
+            return res.status(200).json({message:"Company Added",companyData})
         })
+        
 
-        return res.status(200).json({message:"Company Added"})
     } catch (error) {
         console.log("Add New Company", error.message)
         return res.status(500).json({message:"Something went wrong"})

@@ -4,6 +4,7 @@ const textract = require('textract');
 const WordExtractor = require('word-extractor');
 
 const { admin, bucket } = require("../../firebase");
+const { DOWNLOAD_URL_EXPIRE_DAYS } = require('../Constants');
 
 exports.isValidDate = (dateString) =>{
   const date = new Date(dateString);
@@ -14,7 +15,7 @@ exports.getDownloadUrl = async (path) => {
     const bucket = admin.storage().bucket();
     const file = bucket.file(path);
      const expirationDate = new Date();
-    expirationDate.setDate(expirationDate.getDate() + 2);
+    expirationDate.setDate(expirationDate.getDate() + DOWNLOAD_URL_EXPIRE_DAYS);
     const [url] = await file.getSignedUrl({
         action: 'read',
         expires: expirationDate
