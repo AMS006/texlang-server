@@ -1,13 +1,18 @@
-const { addNewCompany, getAllCompany, getCompanyUsers, setLanguageRate } = require('../../controllers/megdapAdmin/company');
+const {
+  addNewCompany,
+  getAllCompany,
+  getCompanyUsers,
+  setLanguageRate,
+} = require("../../controllers/megdapAdmin/company");
 
-const router = require('express').Router();
+const router = require("express").Router();
 
-router.post('/add', addNewCompany);
+router.post("/add", addNewCompany);
 
-router.get('/all', getAllCompany)
+router.get("/all", getAllCompany);
 
-router.get('/users/:companyId', getCompanyUsers)
+router.get("/users/:companyId", getCompanyUsers);
 
-router.put('/setLanguageRate', setLanguageRate)
+router.put("/setLanguageRate", setLanguageRate);
 
-module.exports = router
+module.exports = router;

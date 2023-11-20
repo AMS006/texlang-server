@@ -1,13 +1,17 @@
-const express = require('express');
+const express = require("express");
 
-const { getWorks, getInvoiceWorks, getJobWiseData } = require('../../controllers/admin/work');
+const {
+  getWorks,
+  getInvoiceWorks,
+  getJobWiseData,
+} = require("../../controllers/admin/work");
 
 const router = express.Router();
 
-router.get('/projectWork/:projectId', getWorks)
+router.get("/projectWork/:projectId", getWorks);
 
-router.get('/projectWork/invoice/:projectId', getInvoiceWorks)
+router.get("/projectWork/invoice/:projectId", getInvoiceWorks);
 
-router.get('/jobWiseData',getJobWiseData)
+router.get("/jobWiseData", getJobWiseData);
 
 module.exports = router;

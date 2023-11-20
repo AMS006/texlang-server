@@ -1,126 +1,150 @@
 const { db } = require("../../../firebase");
 
 exports.getAllProjects = async (req, res) => {
-    try {
-        const user = req.user;
-        if (!user) return res.status(400).json({ message: "Invalid Request" });
-        
-        const projectCollection = db.collection('projects');
+  try {
+    const user = req.user;
+    if (!user) return res.status(400).json({ message: "Invalid Request" });
 
-        let projectQuery = projectCollection.where('companyId','==',user?.companyId).orderBy('createdAt','desc');
+    const projectCollection = db.collection("projects");
 
-        const projectsData = await projectQuery.get();
+    let projectQuery = projectCollection
+      .where("companyId", "==", user?.companyId)
+      .orderBy("createdAt", "desc");
 
-        const projects = projectsData.docs.map((item) => {
-            const id = item.id
-            const projectDoc = item.data();
-            
-            const start_date = new Date(projectDoc.start_date.seconds * 1000 + projectDoc.start_date._nanoseconds / 1000000);
-            const end_date = new Date(projectDoc.end_date.seconds * 1000 + projectDoc.end_date._nanoseconds / 1000000);
-            return {
-                id,
-                name: projectDoc.name,
-                customer: projectDoc?.user?.email,
-                start_date,
-                end_date,
-                status: projectDoc.status
-            };
-        });
-        return res.status(200).json({ projects });
-    } catch (error) {
-        console.log("Get All Projects Error: ", error.message);
-        return res.status(500).json({ message: "Something went wrong" });
-    }
+    const projectsData = await projectQuery.get();
+
+    const projects = projectsData.docs.map((item) => {
+      const id = item.id;
+      const projectDoc = item.data();
+
+      const start_date = new Date(
+        projectDoc.start_date.seconds * 1000 +
+          projectDoc.start_date._nanoseconds / 1000000,
+      );
+      const end_date = new Date(
+        projectDoc.end_date.seconds * 1000 +
+          projectDoc.end_date._nanoseconds / 1000000,
+      );
+      return {
+        id,
+        name: projectDoc.name,
+        customer: projectDoc?.user?.email,
+        start_date,
+        end_date,
+        status: projectDoc.status,
+      };
+    });
+    return res.status(200).json({ projects });
+  } catch (error) {
+    console.log("Get All Projects Error: ", error.message);
+    return res.status(500).json({ message: "Something went wrong" });
+  }
 };
 
 exports.getLatestProject = async (req, res) => {
-    try {
-        const user = req.user;
-        if (!user) return res.status(400).json({ message: "Invalid Request" });
+  try {
+    const user = req.user;
+    if (!user) return res.status(400).json({ message: "Invalid Request" });
 
-        const projectCollection = db.collection('projects');
+    const projectCollection = db.collection("projects");
 
-        let projectQuery = projectCollection.where('companyId','==',user?.companyId).orderBy('createdAt','desc').limit(5);
+    let projectQuery = projectCollection
+      .where("companyId", "==", user?.companyId)
+      .orderBy("createdAt", "desc")
+      .limit(5);
 
-        const projectsData = await projectQuery.get();
+    const projectsData = await projectQuery.get();
 
-        const projects = projectsData.docs.map((item) => {
-            const id = item.id
-            const projectDoc = item.data();
-            
-            const start_date = new Date(projectDoc.start_date.seconds * 1000 + projectDoc.start_date._nanoseconds / 1000000);
-            const end_date = new Date(projectDoc.end_date.seconds * 1000 + projectDoc.end_date._nanoseconds / 1000000);
-            return {
-                id,
-                name: projectDoc?.name,
-                start_date,
-                end_date,
-                status: projectDoc?.status
-            };
-        });
+    const projects = projectsData.docs.map((item) => {
+      const id = item.id;
+      const projectDoc = item.data();
 
-        return res.status(200).json({ projects });
-    } catch (error) {
-        console.log("Get Latest Projects Error: ", error.message);
-        return res.status(500).json({ message: "Something went wrong" });
-    }
+      const start_date = new Date(
+        projectDoc.start_date.seconds * 1000 +
+          projectDoc.start_date._nanoseconds / 1000000,
+      );
+      const end_date = new Date(
+        projectDoc.end_date.seconds * 1000 +
+          projectDoc.end_date._nanoseconds / 1000000,
+      );
+      return {
+        id,
+        name: projectDoc?.name,
+        start_date,
+        end_date,
+        status: projectDoc?.status,
+      };
+    });
+
+    return res.status(200).json({ projects });
+  } catch (error) {
+    console.log("Get Latest Projects Error: ", error.message);
+    return res.status(500).json({ message: "Something went wrong" });
+  }
 };
 
-exports.getProjectDetailsAdmin = async(req,res) =>{
-    try {
-        const {id} = req.params;
-        
-        if(!id)
-            return res.status(400).json({message:"Invalid Request"})
+exports.getProjectDetailsAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
 
-        const projectCollection = db.collection('projects');
+    if (!id) return res.status(400).json({ message: "Invalid Request" });
 
-        const projectDoc = (await projectCollection.doc(id).get()).data()
-        
-        const start_date = new Date(projectDoc.start_date.seconds * 1000 + projectDoc.start_date._nanoseconds / 1000000);
-        const end_date = new Date(projectDoc.end_date.seconds * 1000 + projectDoc.end_date._nanoseconds / 1000000);
-            
-        const project = {
-            id,
-            name: projectDoc?.name,
-            department:projectDoc?.department,
-            userId: projectDoc?.user?.email,
-            userName: projectDoc?.user?.name,
-            totalCost:projectDoc?.totalCost,
-            start_date,
-            end_date,
-            status: projectDoc?.status
-        }
-        return res.status(200).json({project})
-    } catch (error) {
-        console.log("Get Project Error Admin: ", error.message);
-        return res.status(500).json({ message: "Something went wrong" });
-    }
-}
+    const projectCollection = db.collection("projects");
 
-exports.getProjectInvoices = async(req,res) =>{
-    try {
-        const user = req.user
-        if (!user)
-            return res.status(401).json({ message: "Unauthorized" })
-        
-        const projectRef = db.collection('projects').where('companyId','==',user?.companyId).where('status','==','Completed')
+    const projectDoc = (await projectCollection.doc(id).get()).data();
 
-        const projectData = (await projectRef.get()).docs;
+    const start_date = new Date(
+      projectDoc.start_date.seconds * 1000 +
+        projectDoc.start_date._nanoseconds / 1000000,
+    );
+    const end_date = new Date(
+      projectDoc.end_date.seconds * 1000 +
+        projectDoc.end_date._nanoseconds / 1000000,
+    );
 
-        const projects = projectData.map((data) =>{
-            const project = data.data();
-            const id = data.id
-            return {
-                id,
-                name:project?.name,
-                department:project?.department,
-                createdBy:project?.user.email,
-            }
-        })
-        return res.status(200).json({projects})
-    } catch (error) {
-        console.log("Get Invoice Error: ", error.message);
-        return res.status(500).json({ message: "Something went wrong" });
-    }
-}
+    const project = {
+      id,
+      name: projectDoc?.name,
+      department: projectDoc?.department,
+      userId: projectDoc?.user?.email,
+      userName: projectDoc?.user?.name,
+      totalCost: projectDoc?.totalCost,
+      start_date,
+      end_date,
+      status: projectDoc?.status,
+    };
+    return res.status(200).json({ project });
+  } catch (error) {
+    console.log("Get Project Error Admin: ", error.message);
+    return res.status(500).json({ message: "Something went wrong" });
+  }
+};
+
+exports.getProjectInvoices = async (req, res) => {
+  try {
+    const user = req.user;
+    if (!user) return res.status(401).json({ message: "Unauthorized" });
+
+    const projectRef = db
+      .collection("projects")
+      .where("companyId", "==", user?.companyId)
+      .where("status", "==", "Completed");
+
+    const projectData = (await projectRef.get()).docs;
+
+    const projects = projectData.map((data) => {
+      const project = data.data();
+      const id = data.id;
+      return {
+        id,
+        name: project?.name,
+        department: project?.department,
+        createdBy: project?.user.email,
+      };
+    });
+    return res.status(200).json({ projects });
+  } catch (error) {
+    console.log("Get Invoice Error: ", error.message);
+    return res.status(500).json({ message: "Something went wrong" });
+  }
+};

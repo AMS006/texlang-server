@@ -1,15 +1,20 @@
-const express = require('express');
+const express = require("express");
 
-const { addNewTranslator, getTranslatorsSourceLanguages, getTargetLanguages, getTranslators } = require('../../controllers/megdapAdmin/translator');
+const {
+  addNewTranslator,
+  getTranslatorsSourceLanguages,
+  getTargetLanguages,
+  getTranslators,
+} = require("../../controllers/megdapAdmin/translator");
 
 const router = express.Router();
 
-router.post('/add', addNewTranslator);
+router.post("/add", addNewTranslator);
 
-router.get('/sourceLanguages', getTranslatorsSourceLanguages);
+router.get("/sourceLanguages", getTranslatorsSourceLanguages);
 
-router.get('/targetLanguages', getTargetLanguages);
+router.get("/targetLanguages", getTargetLanguages);
 
-router.get('/', getTranslators);
+router.get("/", getTranslators);
 
-module.exports = router
+module.exports = router;
