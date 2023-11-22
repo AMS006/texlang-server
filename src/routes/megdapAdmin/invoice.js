@@ -6,6 +6,8 @@ const {
   getInvoiceDetails,
   getAllInvoices,
   updateInvoiceStatus,
+  getInvoicesToSend,
+  sendInvoiceEmailToUser,
 } = require("../../controllers/megdapAdmin/invoice");
 
 const router = express.Router();
@@ -21,5 +23,9 @@ router.get("/approvePending", getApprovePendingInvoices);
 router.get("/invoiceDetails/:id", getInvoiceDetails);
 
 router.get("/allInvoices", getAllInvoices);
+
+router.get("/toSend", getInvoicesToSend);
+
+router.post("/sendEmail", sendInvoiceEmailToUser);
 
 module.exports = router;

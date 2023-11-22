@@ -69,6 +69,7 @@ exports.addProject = async (req, res) => {
       companyName: user?.companyName,
       status: "In Progress",
       paymentSuccess: false,
+      invoiceGenerated: false,
     };
 
     // Transaction to Update the billed amount of user to add Project and associated work with it and to update JobWiseData

@@ -1,7 +1,7 @@
 const jwt = require("jsonwebtoken");
 const { Roles } = require("../Constants");
 
-const isMegdapAdmin = (req, res, next) => {
+const isCompanyAdmin = (req, res, next) => {
   try {
     if (req.headers.authorization) {
       let token = req.headers.authorization;
@@ -12,7 +12,7 @@ const isMegdapAdmin = (req, res, next) => {
 
       if (!user) return res.status(401).json({ message: "Unauthorized" });
 
-      if (user.role !== Roles.MEGDAP_ADMIN && user.role !== Roles.COMPANY_ADMIN)
+      if (user.role !== Roles.COMPANY_ADMIN)
         return res.status(401).json({ message: "Unauthorized" });
 
       req.user = user;
@@ -22,9 +22,9 @@ const isMegdapAdmin = (req, res, next) => {
       res.status(401).json({ message: "Unauthorized" });
     }
   } catch (error) {
-    console.log("Megdap-Admin-Auth", error.message);
+    console.log("Company-Admin-Auth", error.message);
     return res.status(500).json({ message: "Unauthorized" });
   }
 };
 
-module.exports = isMegdapAdmin;
+module.exports = isCompanyAdmin;

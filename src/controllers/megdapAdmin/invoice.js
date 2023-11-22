@@ -1,6 +1,7 @@
 const { db } = require("../../../firebase");
 const { CGST_RATE, SGST_RATE } = require("../../Constants");
 const { isValidDate } = require("../../helper");
+const sendInvoiceEmail = require("../../utils/sendInvoiceEmail");
 
 exports.getGenerateInvoiceWorks = async (req, res) => {
   try {
@@ -98,8 +99,8 @@ exports.generateInvoice = async (req, res) => {
       if (!id || Number(idx) < 0 || !email || !amount)
         return res.status(400).json({ message: "Invalid Request" });
 
-      const padNumber = String(numberOfInvoice).padStart(5, "0");
-      const invoiceNumber = `#TEX${padNumber}`;
+      const refNumber = String(numberOfInvoice).padStart(4, "0");
+
       const workRef = db.collection("works").doc(id);
       const workData = (await workRef.get()).data();
 
@@ -112,13 +113,16 @@ exports.generateInvoice = async (req, res) => {
       workBatch.update(workRef, { targetLanguage: updatedTargetLanguage });
 
       const invoiceData = {
-        invoiceNumber,
+        refNumber,
         workId: id,
         workIndex: idx,
         email,
         companyName: workData.companyName,
+        companyId: workData?.companyId,
         amount,
-        status: "Pending",
+        adminApproved: false,
+        companyAdminApproved: false,
+        isCanceled: false,
         createdAt: new Date(),
       };
 
@@ -137,7 +141,7 @@ exports.generateInvoice = async (req, res) => {
 exports.getApprovePendingInvoices = async (req, res) => {
   try {
     const invoiceRef = db.collection("invoices");
-    const invoiceQuery = invoiceRef.where("status", "==", "Pending");
+    const invoiceQuery = invoiceRef.where("adminApproved", "==", false);
 
     const invoiceSnapshot = await invoiceQuery.get();
 
@@ -154,9 +158,10 @@ exports.getApprovePendingInvoices = async (req, res) => {
 
       return {
         id: invoiceId,
-        invoiceNumber: invoiceData.invoiceNumber,
+        refrenceNumber: invoiceData?.refNumber,
+        invoiceNumber: invoiceData?.invoiceNumber,
         createdAt: invoiceDate,
-        companyName: invoiceData.companyName,
+        companyName: invoiceData?.companyName,
       };
     });
     return res.status(200).json({ invoices });
@@ -169,12 +174,12 @@ exports.getApprovePendingInvoices = async (req, res) => {
 exports.updateInvoiceStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { isCA, isCancel } = req.body;
     if (!id) return res.status(400).json({ message: "Invalid Request" });
 
     const invoiceRef = db.collection("invoices");
     const batch = db.batch();
-    if (status === "Cancelled") {
+    if (isCancel) {
       const invoiceData = (await invoiceRef.doc(id).get()).data();
       const workRef = db.collection("works").doc(invoiceData.workId);
       const workData = (await workRef.get()).data();
@@ -185,11 +190,19 @@ exports.updateInvoiceStatus = async (req, res) => {
         invoiceGenerated: false,
       };
       batch.update(workRef, { targetLanguage: updatedTargetLanguage });
+      batch.update(invoiceRef.doc(id), { isCanceled: true });
+    } else if (isCA) {
+      batch.update(invoiceRef.doc(id), { companyAdminApproved: true });
+    } else {
+      batch.update(invoiceRef.doc(id), { adminApproved: true });
     }
-    batch.update(invoiceRef.doc(id), { status });
     await batch.commit();
 
-    return res.status(200).json({ message: `Invoice ${status} Successfully` });
+    return res
+      .status(200)
+      .json({
+        message: `Invoice ${isCancel ? "Canceled" : "Approved"} Successfully`,
+      });
   } catch (error) {
     console.log("Approve Invoice Error: ", error.message);
     return res.status(500).json({ message: "Something went wrong" });
@@ -225,12 +238,13 @@ exports.getInvoiceDetails = async (req, res) => {
 
     const invoiceDetails = {
       id: invoiceRef.id,
-      invoiceNumber: invoiceData.invoiceNumber,
-      companyName: invoiceData.companyName,
-      wordCount: workData.wordCount,
-      amount: invoiceData.amount,
-      status: invoiceData.status,
-      email: invoiceData.email,
+      invoiceNumber: invoiceData?.invoiceNumber,
+      companyName: invoiceData?.companyName,
+      wordCount: workData?.wordCount,
+      amount: invoiceData?.amount,
+      hscCode: invoiceData?.hscCode,
+      adminApproved: invoiceData?.adminApproved,
+      email: invoiceData?.email,
       invoiceDate,
       centralTaxRate: CGST_RATE,
       stateTaxRate: SGST_RATE,
@@ -241,7 +255,10 @@ exports.getInvoiceDetails = async (req, res) => {
     };
 
     return res.status(200).json({ invoiceDetails });
-  } catch (error) {}
+  } catch (error) {
+    console.log("Get Invoice Details Error: ", error.message);
+    return res.status(500).json({ message: "Something went wrong" });
+  }
 };
 
 exports.getAllInvoices = async (req, res) => {
@@ -262,15 +279,69 @@ exports.getAllInvoices = async (req, res) => {
 
       return {
         id: invoiceId,
+        refrenceNumber: invoiceData?.refNumber,
         invoiceNumber: invoiceData.invoiceNumber,
         createdAt: invoiceDate,
         companyName: invoiceData.companyName,
-        status: invoiceData.status,
+        status: invoiceData?.companyAdminApproved
+          ? "CA Approved"
+          : invoiceData?.adminApproved
+            ? "Admin Approved"
+            : "Pending",
       };
     });
     return res.status(200).json({ invoices });
   } catch (error) {
     console.log("Get All Invoices Error: ", error.message);
+    return res.status(500).json({ message: "Something went wrong" });
+  }
+};
+
+exports.getInvoicesToSend = async (req, res) => {
+  try {
+    const invoiceRef = db.collection("invoices");
+
+    const invoiceQuery = invoiceRef
+      .where("adminApproved", "==", true)
+      .where("companyAdminApproved", "==", true)
+      .where("isCanceled", "==", false);
+
+    const invoiceSnapshot = await invoiceQuery.get();
+
+    if (invoiceSnapshot.empty) return res.status(200).json({ invoices: [] });
+
+    const invoices = invoiceSnapshot.docs.map((doc) => {
+      const invoiceData = doc.data();
+      const invoiceId = doc.id;
+
+      const invoiceDate = new Date(
+        invoiceData.createdAt.seconds * 1000 +
+          invoiceData.createdAt._nanoseconds / 1000000,
+      );
+
+      return {
+        id: invoiceId,
+        invoiceNumber: invoiceData?.invoiceNumber,
+        invoiceDate,
+        companyName: invoiceData?.companyName,
+      };
+    });
+    return res.status(200).json({ invoices });
+  } catch (error) {
+    console.log("Get Invoices To Send Error: ", error.message);
+    return res.status(500).json({ message: "Something went wrong" });
+  }
+};
+
+exports.sendInvoiceEmailToUser = async (req, res) => {
+  try {
+    const { to, subject, text, attachment } = req.body;
+
+    await sendInvoiceEmail(to, subject, text, attachment);
+
+    res.send("Email sent");
+  } catch (error) {
+    console.log("Send Invoice Email To User Error: ", error.message);
     return res.status(500).json({ message: "Something went wrong" });
   }
 };

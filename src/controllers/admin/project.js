@@ -119,32 +119,3 @@ exports.getProjectDetailsAdmin = async (req, res) => {
     return res.status(500).json({ message: "Something went wrong" });
   }
 };
-
-exports.getProjectInvoices = async (req, res) => {
-  try {
-    const user = req.user;
-    if (!user) return res.status(401).json({ message: "Unauthorized" });
-
-    const projectRef = db
-      .collection("projects")
-      .where("companyId", "==", user?.companyId)
-      .where("status", "==", "Completed");
-
-    const projectData = (await projectRef.get()).docs;
-
-    const projects = projectData.map((data) => {
-      const project = data.data();
-      const id = data.id;
-      return {
-        id,
-        name: project?.name,
-        department: project?.department,
-        createdBy: project?.user.email,
-      };
-    });
-    return res.status(200).json({ projects });
-  } catch (error) {
-    console.log("Get Invoice Error: ", error.message);
-    return res.status(500).json({ message: "Something went wrong" });
-  }
-};

@@ -4,6 +4,7 @@ const admin = require("firebase-admin");
 
 const { db } = require("../../../firebase");
 const sendEmail = require("../../utils/sendEmail");
+const { Roles } = require("../../Constants");
 
 exports.registerUser = async (req, res) => {
   try {
@@ -44,7 +45,7 @@ exports.registerUser = async (req, res) => {
       companyName: user?.companyName,
       password: hashedPassword,
       totalBilledAmount: 0,
-      role: "user",
+      role: Roles.USER,
       status: true,
       createdAt: date,
     };
@@ -55,6 +56,7 @@ exports.registerUser = async (req, res) => {
             <p>An account has been created for you on <a href="https://texlang-client-qjvrxcjtna-uc.a.run.app/" target="_blank">Texlang</a>. Please use the below credentials to login.</p>
             <p>Email: ${email}</p>
             <p>Password: ${password}</p>`;
+
     const subject = "Texlang Account Created";
     await sendEmail(email, subject, html);
 

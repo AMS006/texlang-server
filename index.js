@@ -6,8 +6,10 @@ const workRouter = require("./src/routes/work");
 const adminRouter = require("./src/routes/admin");
 const projectRouter = require("./src/routes/project");
 const megdapAdminRouter = require("./src/routes/megdapAdmin");
+const companyAdminRouter = require("./src/routes/companyAdmin");
 
 const isAdmin = require("./src/middleware/isAdmin");
+const isCompanyAdmin = require("./src/middleware/isCcompanyAdmin");
 require("dotenv").config();
 
 const app = express();
@@ -28,7 +30,7 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api/user", userRouter);
@@ -36,6 +38,7 @@ app.use("/api/project", projectRouter);
 app.use("/api/work", workRouter);
 app.use("/api/admin", isAdmin, adminRouter);
 app.use("/api/megdapadmin", megdapAdminRouter);
+app.use("/api/companyAdmin", isCompanyAdmin, companyAdminRouter);
 
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);

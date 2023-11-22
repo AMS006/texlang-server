@@ -158,3 +158,34 @@ exports.setLanguageRate = async (req, res) => {
     return res.status(500).json({ message: "Someting went wrong" });
   }
 };
+
+exports.getCompanyContractDetails = async (req, res) => {
+  try {
+    const { companyId } = req.params;
+
+    if (!companyId) return res.status(400).json({ message: "Invalid Request" });
+
+    const companyRef = db.collection("companies").doc(companyId);
+
+    const companyData = (await companyRef.get()).data();
+
+    if (!companyData)
+      return res.status(400).json({ message: "Invalid Request" });
+
+    const contractDetails = [
+      {
+        id: companyRef.id,
+        name: companyData.name,
+        fromDate: companyData.aggrementStartDate,
+        toDate: companyData.aggrementEndDate,
+        contractDetails: companyData.contractDetails,
+        isActive: true,
+      },
+    ];
+
+    return res.status(200).json({ contractDetails });
+  } catch (error) {
+    console.log("Megdap-Admin-Get-Contract-Details", error.message);
+    return res.status(500).json({ message: "Someting went wrong" });
+  }
+};

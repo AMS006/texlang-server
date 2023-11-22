@@ -4,3 +4,10 @@ exports.USER_JWT_EXPIRE_DAYS = "2d";
 exports.ADMIN_JWT_EXPIRE_DAYS = "2d";
 exports.CGST_RATE = 9.0;
 exports.SGST_RATE = 9.0;
+
+exports.Roles = {
+  ADMIN: "admin",
+  USER: "user",
+  COMPANY_ADMIN: "companyAdmin",
+  MEGDAP_ADMIN: "megdapAdmin",
+};

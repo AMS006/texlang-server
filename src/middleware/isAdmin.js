@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const { db } = require("../../firebase");
+const { Roles } = require("../Constants");
 
 const isAdmin = async (req, res, next) => {
   try {
@@ -15,7 +16,7 @@ const isAdmin = async (req, res, next) => {
       const userQuery = await userRef.doc(user.id).get();
 
       const userData = userQuery.data();
-      if (!userData || !userData?.status || userData.role !== "admin") {
+      if (!userData || !userData?.status || userData.role !== Roles.ADMIN) {
         return res.status(401).json({ message: "Unauthorized" });
       }
 
