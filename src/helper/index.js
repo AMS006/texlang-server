@@ -4,7 +4,7 @@ const textract = require("textract");
 const WordExtractor = require("word-extractor");
 
 const { admin, bucket } = require("../../firebase");
-const { DOWNLOAD_URL_EXPIRE_DAYS } = require("../Constants");
+const { DOWNLOAD_URL_EXPIRE_DAYS } = require("../constants");
 
 exports.isValidDate = (dateString) => {
   const date = new Date(dateString);

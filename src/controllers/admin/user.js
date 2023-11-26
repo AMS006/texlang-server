@@ -4,7 +4,7 @@ const admin = require("firebase-admin");
 
 const { db } = require("../../../firebase");
 const sendEmail = require("../../utils/sendEmail");
-const { Roles } = require("../../Constants");
+const { Roles } = require("../../constants");
 
 exports.registerUser = async (req, res) => {
   try {

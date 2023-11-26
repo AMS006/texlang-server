@@ -1,5 +1,5 @@
 const { db } = require("../../../firebase");
-const { CGST_RATE, SGST_RATE } = require("../../Constants");
+const { CGST_RATE, SGST_RATE } = require("../../constants");
 
 exports.getProjectInvoices = async (req, res) => {
   try {

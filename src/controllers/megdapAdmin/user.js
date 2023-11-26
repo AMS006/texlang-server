@@ -2,7 +2,7 @@ const bcrypt = require("bcryptjs");
 const { db, admin } = require("../../../firebase");
 const generateToken = require("../../utils/generateToken");
 const sendEmail = require("../../utils/sendEmail");
-const { ADMIN_JWT_EXPIRE_DAYS, Roles } = require("../../Constants");
+const { ADMIN_JWT_EXPIRE_DAYS, Roles } = require("../../constants");
 
 exports.loginMegdapAdmin = async (req, res) => {
   try {

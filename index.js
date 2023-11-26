@@ -8,8 +8,9 @@ const projectRouter = require("./src/routes/project");
 const megdapAdminRouter = require("./src/routes/megdapAdmin");
 const companyAdminRouter = require("./src/routes/companyAdmin");
 
-const isAdmin = require("./src/middleware/isAdmin");
-const isCompanyAdmin = require("./src/middleware/isCcompanyAdmin");
+const authenticate = require("./src/middleware/authenticate");
+const canAccess = require("./src/middleware/canAccess");
+const { Roles } = require("./src/constants");
 require("dotenv").config();
 
 const app = express();
@@ -36,9 +37,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api/user", userRouter);
 app.use("/api/project", projectRouter);
 app.use("/api/work", workRouter);
-app.use("/api/admin", isAdmin, adminRouter);
+app.use("/api/admin", authenticate,canAccess([Roles.ADMIN]), adminRouter);
 app.use("/api/megdapadmin", megdapAdminRouter);
-app.use("/api/companyAdmin", isCompanyAdmin, companyAdminRouter);
+app.use("/api/companyAdmin", authenticate,canAccess([Roles.COMPANY_ADMIN]), companyAdminRouter);
 
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);

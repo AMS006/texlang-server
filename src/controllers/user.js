@@ -5,7 +5,7 @@ const validator = require("validator");
 const { db } = require("../../firebase");
 const sendEmail = require("../utils/sendEmail");
 const generateToken = require("../utils/generateToken");
-const { USER_JWT_EXPIRE_DAYS } = require("../Constants");
+const { USER_JWT_EXPIRE_DAYS } = require("../constants");
 
 exports.loginUser = async (req, res) => {
   try {

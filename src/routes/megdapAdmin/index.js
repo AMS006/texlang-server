@@ -1,19 +1,21 @@
 const express = require("express");
 
-const isMegdapAdmin = require("../../middleware/isMegdapAdmin");
+const authenticate = require("../../middleware/authenticate");
+const canAccess = require("../../middleware/canAccess");
+const { Roles } = require("../../constants");
 
 const router = express.Router();
 
 router.use("/user", require("./user"));
 
-router.use("/company", isMegdapAdmin, require("./company"));
+router.use("/company", authenticate,canAccess([Roles.MEGDAP_ADMIN]), require("./company"));
 
-router.use("/project", isMegdapAdmin, require("./project"));
+router.use("/project", authenticate,canAccess([Roles.MEGDAP_ADMIN]), require("./project"));
 
-router.use("/work", isMegdapAdmin, require("./work"));
+router.use("/work", authenticate,canAccess([Roles.MEGDAP_ADMIN]), require("./work"));
 
-router.use("/translator", isMegdapAdmin, require("./translator"));
+router.use("/translator", authenticate,canAccess([Roles.MEGDAP_ADMIN]), require("./translator"));
 
-router.use("/invoice", isMegdapAdmin, require("./invoice"));
+router.use("/invoice", authenticate, require("./invoice"));
 
 module.exports = router;

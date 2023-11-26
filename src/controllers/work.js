@@ -2,7 +2,7 @@ const { filesize } = require("filesize");
 
 const { db } = require("../../firebase");
 const { countWords } = require("../helper");
-const { DEFAULT_LANGUAGE_RATE } = require("../Constants");
+const { DEFAULT_LANGUAGE_RATE } = require("../constants");
 
 exports.uploadWork = async (req, res) => {
   try {
