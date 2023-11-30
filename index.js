@@ -18,6 +18,7 @@ const PORT = process.env.PORT || 4000;
 
 const whitelist = [
   "https://texlang-client-qjvrxcjtna-uc.a.run.app",
+  "https://texlang-admin-client-qjvrxcjtna-uc.a.run.app",
   "http://localhost:5174",
   "http://localhost:5173",
 ];
@@ -25,6 +26,7 @@ const whitelist = [
 const corsOptions = {
   origin: function (origin, callback) {
     if (whitelist.indexOf(origin) !== -1 || !origin) callback(null, true);
+    else callback(new Error("Not allowed by CORS"));
   },
   methods: ["GET", "POST", "PUT", "DELETE"],
 };
