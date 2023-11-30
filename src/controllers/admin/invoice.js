@@ -46,6 +46,7 @@ exports.generateProjectInvoice = async (req, res) => {
       .where("projectId", "==", projectId)
       .get();
 
+      // If Invoice is already genereted then send the invoice data
     if (!isInvoiceGenerated.empty) {
       const invoiceDetails = isInvoiceGenerated.docs[0].data();
       const invoiceDate = new Date(
@@ -62,15 +63,16 @@ exports.generateProjectInvoice = async (req, res) => {
         amount: invoiceDetails.amount,
         works: invoiceDetails?.works || [],
         userEmail: invoiceDetails?.userEmail,
-        department: invoiceDetails?.department,
         taxDetails: invoiceDetails?.taxDetails,
       };
       return res
         .status(200)
         .json({ message: "Invoice Already Generated", invoice });
     }
+
+    // Generate Invoice
     const projectData = (await projectRef.get()).data();
-    const invoiceData = await projectInvoiceRef.get();
+    const invoiceData = await projectInvoiceRef.get(); // To get the size of the collection for invoice number
     const num = (invoiceData.size + 1).toString().padStart(5, "0");
     const invoiceNumber = `#TEX${num}`;
     const invoiceDate = new Date();
@@ -162,7 +164,6 @@ exports.getProjectInvoiceDetails = async (req, res) => {
       amount: projectInvoiceData.amount,
       works: projectInvoiceData?.works || [],
       userEmail: projectInvoiceData?.userEmail,
-      department: projectInvoiceData?.department,
       taxDetails: projectInvoiceData?.taxDetails,
     };
 

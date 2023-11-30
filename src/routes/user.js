@@ -14,7 +14,7 @@ const { Roles } = require("../constants");
 
 const router = express.Router();
 
-router.get("/", authenticate,canAccess([Roles.USER]), getUser);
+router.get("/", authenticate,canAccess([Roles.USER,Roles.ADMIN,Roles.COMPANY_ADMIN]), getUser);
 
 router.post("/sendCode", sendCode);
 
@@ -24,6 +24,6 @@ router.post("/resetPassword", resetPassword);
 
 router.post("/forgotPassword", forgotPassword);
 
-router.post("/changePassword", authenticate,canAccess([Roles.USER,Roles.ADMIN]), changePassword);
+router.post("/changePassword", authenticate,canAccess([Roles.USER,Roles.ADMIN,Roles.COMPANY_ADMIN]), changePassword);
 
 module.exports = router;

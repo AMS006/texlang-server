@@ -11,8 +11,8 @@ const router = express.Router();
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
-router.post("/upload", authenticate,canAccess([Roles.USER,Roles.ADMIN]), upload.single("file"), uploadWork);
+router.post("/upload", authenticate,canAccess([Roles.USER,Roles.ADMIN,Roles.COMPANY_ADMIN]), upload.single("file"), uploadWork);
 
-router.post("/comment/:id", authenticate,canAccess([Roles.USER,Roles.ADMIN]), addComment);
+router.post("/comment/:id", authenticate,canAccess([Roles.USER,Roles.ADMIN,Roles.COMPANY_ADMIN]), addComment);
 
 module.exports = router;

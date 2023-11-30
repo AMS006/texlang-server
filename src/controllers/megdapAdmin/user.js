@@ -8,6 +8,8 @@ exports.loginMegdapAdmin = async (req, res) => {
   try {
     const { userName, password } = req.body;
 
+    if(!userName || !password) return res.status(400).json({message:"Invalid Request"});
+
     let userRef = db.collection("users").where("email", "==", userName);
 
     const userData = await userRef.get();

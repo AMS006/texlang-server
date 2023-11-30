@@ -1,6 +1,7 @@
 const { db, admin } = require("../../../firebase");
 const bcrypt = require("bcryptjs");
 const sendEmail = require("../../utils/sendEmail");
+const { Roles } = require("../../constants");
 
 exports.addNewCompany = async (req, res) => {
   try {
@@ -58,7 +59,7 @@ exports.addNewCompany = async (req, res) => {
         password: hashedPassword,
         companyId: companyDoc.id,
         companyName: companyName,
-        role: "admin",
+        role: Roles.ADMIN,
         status: true,
         totalBilledAmount: 0,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -105,6 +106,7 @@ exports.getAllCompany = async (req, res) => {
     return res.status(500).json({ message: "Something went wrong" });
   }
 };
+
 exports.getCompanyUsers = async (req, res) => {
   try {
     const { companyId } = req.params;
@@ -172,14 +174,15 @@ exports.getCompanyContractDetails = async (req, res) => {
     if (!companyData)
       return res.status(400).json({ message: "Invalid Request" });
 
+    const isAgreementActive = new Date() <= companyData.agreementEndDate;
     const contractDetails = [
       {
         id: companyRef.id,
         name: companyData.name,
-        fromDate: companyData.aggrementStartDate,
-        toDate: companyData.aggrementEndDate,
+        fromDate: companyData.agreementStartDate,
+        toDate: companyData.agreementEndDate,
         contractDetails: companyData.contractDetails,
-        isActive: true,
+        isActive: isAgreementActive,
       },
     ];
 

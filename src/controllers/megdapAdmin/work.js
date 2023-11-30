@@ -1,4 +1,4 @@
-const { db, admin } = require("../../../firebase");
+const { db } = require("../../../firebase");
 const {
   getDownloadUrl,
   uploadFileToFirebaseStorage,
@@ -8,29 +8,34 @@ const {
 exports.getDownloadProjectWorks = async (req, res) => {
   try {
     const { projectId } = req.params;
+
     if (!projectId)
       return res.status(400).json({
         message: "Invalid Request",
       });
+
     const workRef = db.collection("works");
+
     const workQuery = workRef
       .where("projectId", "==", projectId)
-      .where("currentStatus", "!=", "Completed");
+      .where("currentStatus" ,"==" ,"In Progress");
+    
+
     const workSnapshot = await workQuery.get();
     if (workSnapshot.empty)
       return res.status(200).json({
         works: [],
       });
-
+    
     const works = await Promise.all(
-      workSnapshot.docs.map(async (doc) => {
+      workSnapshot.docs.map(async(doc) => {
         const id = doc.id;
         const workDoc = doc.data();
-
-        const downloadUrl = await getDownloadUrl(workDoc?.filePath);
+        const downloadUrl = await getDownloadUrl(workDoc?.sourceFilePath);
         return {
           id,
           sourceLanguage: workDoc?.sourceLanguage,
+          fileName: workDoc?.name,
           downloadUrl,
         };
       }),
@@ -52,27 +57,51 @@ exports.getUploadProjectWorks = async (req, res) => {
       return res.status(400).json({
         message: "Invalid Request",
       });
-    const workRef = db.collection("works");
-    const workQuery = workRef
+    const fileRef = db.collection("files");
+
+    const fileQuery = fileRef
       .where("projectId", "==", projectId)
-      .where("currentStatus", "==", "In Progress");
-    const workSnapshot = await workQuery.get();
-    if (workSnapshot.empty)
+      .where("status", "==", "In Progress");
+
+    const fileSnapshot = await fileQuery.get();
+    if (fileSnapshot.empty)
       return res.status(200).json({
         works: [],
       });
-
-    let works = [];
-    workSnapshot.forEach((doc) => {
+    
+    const filesData = fileSnapshot.docs.map((doc) => {
       const id = doc.id;
-      const workDoc = doc.data();
-      works.push({
+      const fileDoc = doc.data();
+      return {
         id,
-        sourceLanguage: workDoc?.sourceLanguage,
-        targetLanguage: workDoc?.targetLanguage,
-        name: workDoc?.name,
-      });
+        workId: fileDoc?.workId,
+        sourceLanguage: fileDoc?.sourceLanguage,
+        targetLanguage: fileDoc?.targetLanguage,
+        name: fileDoc?.fileName,
+      };
     });
+
+    const works = filesData.reduce((result, current) => {
+      // Check if there is an entry in the result array for the current workId
+      const existingEntry = result.find(entry => entry.workId === current.workId);
+
+      // If an entry exists, push the current object into its items array
+      if (existingEntry) {
+        existingEntry.items.push(current);
+      } else {
+        // If an entry doesn't exist, create a new entry with the current object in its items array
+        result.push({
+          workId: current.workId,
+          name: current.name,
+          sourceLanguage: current.sourceLanguage,
+          items: [current]
+        });
+      }
+
+      return result;
+    }, []);
+
+  
     return res.status(200).json({ works });
   } catch (error) {
     console.log("Get Work Error: ", error.message);
@@ -83,38 +112,27 @@ exports.getUploadProjectWorks = async (req, res) => {
 exports.uploadUserProjectWork = async (req, res) => {
   try {
     const file = req.file;
-    const { idx, id } = req.body;
+    const { id } = req.body;
 
-    if (!file || !idx || !id)
+    if (!file || !id)
       return res.status(400).json({ message: "Invalid Request" });
 
-    const workRef = db.collection("works").doc(id);
-    const workData = (await workRef.get()).data();
+    const fileRef = db.collection("files").doc(id);
+    const fileData = (await fileRef.get()).data();
 
-    const filePath = `${workData?.companyName.split(" ").join("_")}/${
-      workData?.userId + "/completed"
-    }/${workData.name}`;
+    const batch = db.batch();
+    const date = new Date();
+    const filePath = `${fileData?.companyName.split(" ").join("_")}/${fileData?.userId}/completed/${date}/${fileData.fileName}`;
     await uploadFileToFirebaseStorage(file, filePath);
 
-    workData.targetLanguage[Number(idx)] = {
-      ...workData.targetLanguage[Number(idx)],
-      downloadPath: filePath,
-    };
-    const isCompleted = workData.targetLanguage.every((obj) =>
-      obj.hasOwnProperty("downloadPath"),
-    );
-    if (isCompleted) {
-      const end_date = admin.firestore.FieldValue.serverTimestamp();
-      await workRef.update({
-        targetLanguage: workData.targetLanguage,
-        currentStatus: "Completed",
-        end_date,
-      });
-    } else {
-      await workRef.update({
-        targetLanguage: workData.targetLanguage,
-      });
-    }
+    batch.update(fileRef, {
+      status: "Completed",
+      downloadPath:filePath,
+      end_date: date,
+    });
+
+  
+    await batch.commit();
     return res.status(200).json({ message: "Work Uploaded" });
   } catch (error) {
     console.log("Upload User Project Work Error: ", error.message);
@@ -233,25 +251,99 @@ exports.updateUserWorks = async (req, res) => {
     const workRef = db.collection("works").doc(id);
     const workData = (await workRef.get()).data();
 
-    const workCost = Number(workData?.cost);
-    if (workCost !== Number(cost)) {
-      const userRef = db.collection("users").doc(workData?.userId);
-      const userData = (await userRef.get()).data();
-      const totalCost = userData?.totalBilledAmount;
-      console.log(totalCost);
-      const updatedTotalCost = totalCost - workCost + Number(cost);
-      await userRef.update({
-        totalBilledAmount: Number(updatedTotalCost),
+    const userRef = db.collection("users").doc(workData?.userId);
+    const userData = (await userRef.get()).data();
+
+    const projectRef = db.collection("projects").doc(workData?.projectId);
+    const projectData = (await projectRef.get()).data();
+
+    const fileRef = await db.collection("files").where("workId", "==", id).get();
+
+    const oldCost = Number(workData?.cost);
+    const oldWordCount = Number(workData?.wordCount);
+
+    const newCost = Number(cost);
+    const newWordCount = Number(wordCount);
+
+    const newProjectCost = projectData?.totalCost - oldCost + newCost;
+    const newProjectWordCount = projectData?.wordCount - oldWordCount + newWordCount;
+    const newUserTotalBilledAmount = userData?.totalBilledAmount - oldCost + newCost;
+
+    const batch = db.batch();
+    batch.update(workRef, { wordCount:Number(newWordCount), cost:Number(newCost) });// Update wordCount and cost in workCollction
+    batch.update(projectRef, { cost: newProjectCost, wordCount: newProjectWordCount });// Update wordCount and cost in projectCollction
+    batch.update(userRef, { totalBilledAmount: newUserTotalBilledAmount });// Update totalBilledAmount in userCollction
+
+    // Update wordCount and cost in fileCollction
+    if(oldWordCount !== newWordCount) {
+      fileRef.forEach((doc) => {
+        batch.update(doc.ref, { wordCount:newWordCount });
       });
     }
-    await workRef.update({
-      wordCount,
-      cost,
-    });
 
+    await batch.commit();
+    
     return res.status(200).json({ message: "Work Updated" });
   } catch (error) {
     console.log("Update User Works Error: ", error.message);
     return res.status(500).json({ message: "Something went wrong" });
   }
 };
+
+exports.updateWorkStatus = async(req,res) =>{
+  try {
+    const {workId} = req.params;
+
+    if(!workId) return res.status(400).json({message:"Invalid Request"});
+
+    const workRef = db.collection("works").doc(workId);
+
+    await workRef.update({currentStatus:"Completed"});
+
+    return res.status(200).json({message:"Work Updated"});
+  } catch (error) {
+    console.log("Update Work Status Error: ", error.message);
+    return res.status(500).json({ message: "Something went wrong" });
+  }
+}
+
+exports.getNotAssignedWorks = async(req,res) =>{
+  try {
+    const {sourceLanguage,targetLanguage} = req.query;
+
+    if(!sourceLanguage || !targetLanguage) return res.status(400).json({message:"Invalid Request"});
+
+    const fileRef = db.collection("files");
+
+    const fileQuery = fileRef
+      .where("sourceLanguage", "==", sourceLanguage)
+      .where("targetLanguage", "==", targetLanguage)
+      .where("status", "!=", "Completed")
+      .where("translatorAssigned", "==", false);
+
+    const fileSnapshot = await fileQuery.get();
+
+    if (fileSnapshot.empty)
+      return res.status(200).json({
+        works: [],
+      });
+
+    const works = fileSnapshot.docs.map((doc) => {
+      const id = doc.id;
+      const fileDoc = doc.data();
+      return {
+        id,
+        workId: fileDoc?.workId,
+        sourceLanguage: fileDoc?.sourceLanguage,
+        targetLanguage: fileDoc?.targetLanguage,
+        fileName: fileDoc?.fileName,
+        wordCount: fileDoc?.wordCount,
+        jobType: fileDoc?.contentType,
+      };
+    });
+    return res.status(200).json({ works });
+  } catch (error) {
+    console.log("Get Not Assigned Works Error: ", error.message);
+    return res.status(500).json({ message: "Something went wrong" });
+  }
+}

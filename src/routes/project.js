@@ -11,10 +11,10 @@ const { Roles } = require("../constants");
 
 const router = express.Router();
 
-router.get("/", authenticate,canAccess([Roles.USER,Roles.ADMIN]), getProjects);
+router.get("/", authenticate,canAccess([Roles.USER,Roles.ADMIN,Roles.COMPANY_ADMIN]), getProjects);
 
-router.get("/:id", authenticate,canAccess([Roles.USER,Roles.ADMIN]), getProjectDetailsUser);
+router.get("/:id", authenticate,canAccess([Roles.USER,Roles.ADMIN,Roles.COMPANY_ADMIN]), getProjectDetailsUser);
 
-router.post("/", authenticate,canAccess([Roles.USER,Roles.ADMIN]), addProject);
+router.post("/", authenticate,canAccess([Roles.USER,Roles.ADMIN,Roles.COMPANY_ADMIN]), addProject);
 
 module.exports = router;

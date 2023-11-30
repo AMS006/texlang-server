@@ -8,6 +8,8 @@ const {
   updateUserWorks,
   uploadUserProjectWork,
   getWorkForCompanyBilling,
+  updateWorkStatus,
+  getNotAssignedWorks,
 } = require("../../controllers/megdapAdmin/work");
 
 const router = express.Router();
@@ -22,6 +24,10 @@ router.get("/uploadProject/:projectId", getUploadProjectWorks);
 router.get("/userWorksForUpdate/:projectId", getUserWorksForUpdate);
 
 router.get("/userWorksForCompanyBilling", getWorkForCompanyBilling);
+
+router.get("/notAssignedWorks", getNotAssignedWorks);
+
+router.put("/updateStatus/:workId", updateWorkStatus);
 
 router.post(
   "/uploadCustomerFile",

@@ -50,10 +50,7 @@ exports.getInvoiceDetails = async (req, res) => {
     if (!invoiceData)
       return res.status(400).json({ message: "Invalid Request" });
 
-    const workRef = db.collection("works").doc(invoiceData.workId);
-    const workData = (await workRef.get()).data();
-
-    if (!workData) return res.status(400).json({ message: "Invalid Request" });
+    
 
     const invoiceDate = new Date(
       invoiceData.createdAt.seconds * 1000 +
@@ -68,7 +65,7 @@ exports.getInvoiceDetails = async (req, res) => {
       id: invoiceRef.id,
       invoiceNumber: invoiceData?.invoiceNumber,
       companyName: invoiceData?.companyName,
-      wordCount: workData?.wordCount,
+      wordCount: invoiceData?.wordCount,
       amount: invoiceData?.amount,
       adminApproved: invoiceData?.adminApproved,
       email: invoiceData?.email,

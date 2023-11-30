@@ -14,6 +14,7 @@ exports.addProject = async (req, res) => {
     if (validator.isEmpty(name) || validator.isEmpty(department)) {
       return res.status(400).json({ message: "Plzz provide all Fields" });
     }
+
     if (!works || works.length == 0)
       return res.status(400).json({ message: "Invalid Request" });
 
@@ -72,7 +73,6 @@ exports.addProject = async (req, res) => {
       invoiceGenerated: false,
     };
 
-    // Transaction to Update the billed amount of user to add Project and associated work with it and to update JobWiseData
     await db.runTransaction(async (transaction) => {
       const amount = Number(totalCost);
       const jobWiseDataExists = (await transaction.get(jobWiseDataRef)).exists;
@@ -83,21 +83,50 @@ exports.addProject = async (req, res) => {
 
       transaction.set(projectRef, projectData);
 
-      const batch = db.batch();
+      const fileBatch = db.batch();
+      const workBatch = db.batch();
+
       worksData.forEach((work) => {
         const workRef = db.collection("works").doc();
-        batch.set(workRef, {
+        
+        work.targetLanguage.forEach((language) => {
+          const fileRef = db.collection("files").doc();
+          const fileData = {
+            companyId:user?.companyId,
+            userId: user.id,
+            projectId,
+            companyName:user?.companyName,
+            sourceLanguage: String(work.sourceLanguage).toLowerCase(),
+            targetLanguage: String(language.lang).toLowerCase(),
+            status: "In Progress",
+            wordCount:work?.wordCount|| 0,
+            value: work?.value || 0,
+            contentType: work?.contentType,
+            workId: workRef.id,
+            userEmail: user.email,
+            projectName:name,
+            fileName:work?.name,
+            start_date,
+            end_date,
+            translatorAssigned: false,
+            invoiceGenerated: false,
+          }
+          fileBatch.set(fileRef, fileData);
+        });
+
+        workBatch.set(workRef, {
           ...work,
           userId: user.id,
-          userEmail: user.email,
           companyId: user.companyId,
+          userEmail: user.email,
           companyName: user.companyName,
           start_date,
           end_date,
           projectName: name,
         });
       });
-      await batch.commit();
+
+      await Promise.all([fileBatch.commit(), workBatch.commit()]);
 
       const jobWiseData = formatJobWiseData(works);
 
@@ -172,9 +201,10 @@ exports.getProjectDetailsUser = async (req, res) => {
 
     const projectCollection = db.collection("projects");
 
-    const data = (await projectCollection.doc(id).get()).data();
+    const projectData = (await projectCollection.doc(id).get()).data();
 
-    if (!data) return res.status(404).json({ message: "No Project Found" });
+    if (!projectData) return res.status(404).json({ message: "No Project Found" });
+
     const workCollection = db.collection("works").where("projectId", "==", id);
     const worksData = (await workCollection.get()).docs;
 
@@ -182,10 +212,16 @@ exports.getProjectDetailsUser = async (req, res) => {
     for (let i = 0; i < worksData.length; i++) {
       const work = worksData[i].data();
       const id = worksData[i].id;
-      for (let i = 0; i < work.targetLanguage.length; i++) {
-        if (work.targetLanguage[i].downloadPath) {
+
+      const fileCollection = db.collection("files").where("workId", "==", id);
+
+      const filesData = (await fileCollection.get()).docs;
+      const isWordCompleted = filesData.every((file) => file.data().status === "Completed");
+      for (let i = 0; i < filesData.length; i++) {
+        const file = filesData[i].data();
+        if (file?.downloadPath) {
           const downloadUrl = await getDownloadUrl(
-            work.targetLanguage[i].downloadPath,
+            file.downloadPath,
           );
 
           work.targetLanguage[i].downloadUrl = downloadUrl;
@@ -197,13 +233,13 @@ exports.getProjectDetailsUser = async (req, res) => {
         name: work?.name,
         sourceLanguage: work?.sourceLanguage,
         approvalStatus: work?.approvalStatus,
-        currentStatus: work?.currentStatus,
+        currentStatus: isWordCompleted ? "Completed" : "In Progress",
         targetLanguage: work?.targetLanguage,
       };
       works.push(updatedWork);
     }
     const project = {
-      name: data.name,
+      name: projectData.name,
     };
     return res.status(200).json({ project, works });
   } catch (error) {

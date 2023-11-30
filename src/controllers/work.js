@@ -30,13 +30,13 @@ exports.uploadWork = async (req, res) => {
     let format = fileName.split(".").pop();
 
     res.status(200).json({
-      filePath: remoteFileName,
+      sourceFilePath: remoteFileName,
       name: req.body.name,
-      wordCount,
-      value,
       size,
       format,
-      sourceLanguage: "English",
+      wordCount,
+      value,
+      sourceLanguage: "english",
       targetLanguage: [],
       contentType: "translation",
     });
