@@ -8,6 +8,7 @@ exports.uploadWork = async (req, res) => {
   try {
     const file = req.file;
     const user = req.user;
+    console.log(req.body.filePath)
 
     if (!user) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -21,14 +22,14 @@ exports.uploadWork = async (req, res) => {
 
     wordCount = await countWords(file);
     
-    const remoteFileName = req.body.filePath;
+    const remoteFilePath = req.body.filePath;
 
     const fileName = file.originalname;
     let size = filesize(file.size, { base: 2, standard: "jedec" });
     let format = fileName.split(".").pop();
 
     res.status(200).json({
-      sourceFilePath: remoteFileName,
+      sourceFilePath: remoteFilePath,
       name: req.body.name,
       size,
       format,

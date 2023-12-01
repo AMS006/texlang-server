@@ -63,7 +63,7 @@ exports.sendCode = async (req, res) => {
     const userCollection = db.collection("users");
     const userSnapshot = await userCollection.where("email", "==", email).get();
     if (userSnapshot.empty) {
-      return res.status(404).json({ message: "User Not Found" });
+      return res.status(404).json({ message: "Invalid Credentials" });
     }
     const userDoc = userSnapshot.docs[0];
     const userData = userDoc.data();

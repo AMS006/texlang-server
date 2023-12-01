@@ -84,8 +84,7 @@ exports.addProject = async (req, res) => {
 
       transaction.set(projectRef, projectData);
 
-      const fileBatch = db.batch();
-      const workBatch = db.batch();
+      
 
       worksData.forEach((work) => {
         const workRef = db.collection("works").doc();
@@ -112,10 +111,10 @@ exports.addProject = async (req, res) => {
             translatorAssigned: false,
             invoiceGenerated: false,
           }
-          fileBatch.set(fileRef, fileData);
+          transaction.set(fileRef, fileData);
         });
 
-        workBatch.set(workRef, {
+        transaction.set(workRef, {
           ...work,
           userId: user.id,
           companyId: user.companyId,
@@ -127,8 +126,7 @@ exports.addProject = async (req, res) => {
         });
       });
 
-      await Promise.all([fileBatch.commit(), workBatch.commit()]);
-
+    
       const jobWiseData = formatJobWiseData(works);
 
       if (jobWiseDataExists) {
