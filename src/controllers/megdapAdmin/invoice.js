@@ -105,6 +105,7 @@ exports.generateInvoice = async (req, res) => {
       fileBatch.update(fileRef, { invoiceGenerated: true });
 
 
+      const dateInString = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
       const invoiceData = {
         refNumber,
         fileId: id,
@@ -116,7 +117,7 @@ exports.generateInvoice = async (req, res) => {
         adminApproved: false,
         companyAdminApproved: false,
         isCanceled: false,
-        createdAt: new Date(),
+        createdAt: new Date(dateInString),
       };
 
       invoiceBatch.set(invoiceRef.doc(), invoiceData);

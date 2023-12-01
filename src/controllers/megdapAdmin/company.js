@@ -46,10 +46,12 @@ exports.addNewCompany = async (req, res) => {
     const userDoc = userCollection.doc();
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(adminPassword, salt);
+    const createdAt = admin.firestore.FieldValue.serverTimestamp();
     await db.runTransaction(async (transaction) => {
       transaction.set(companyDoc, {
         name: companyName,
         country,
+        createdAt,
         ...data,
       });
       transaction.set(userDoc, {
@@ -62,7 +64,7 @@ exports.addNewCompany = async (req, res) => {
         role: Roles.ADMIN,
         status: true,
         totalBilledAmount: 0,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdAt
       });
       const html = `<p>Dear Customer,</p>
                 <br />
@@ -174,7 +176,8 @@ exports.getCompanyContractDetails = async (req, res) => {
     if (!companyData)
       return res.status(400).json({ message: "Invalid Request" });
 
-    const isAgreementActive = new Date() <= companyData.agreementEndDate;
+    const dateInString = new Date().toLocaleString("en-US", {timeZone:"Asia/Kolkata"});
+    const isAgreementActive = new Date(dateInString) <= companyData.agreementEndDate;
     const contractDetails = [
       {
         id: companyRef.id,

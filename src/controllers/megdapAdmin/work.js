@@ -121,7 +121,8 @@ exports.uploadUserProjectWork = async (req, res) => {
     const fileData = (await fileRef.get()).data();
 
     const batch = db.batch();
-    const date = new Date();
+    const dateInString = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+    const date = new Date(dateInString);
     const filePath = `${fileData?.companyName.split(" ").join("_")}/${fileData?.userId}/completed/${date}/${fileData.fileName}`;
     await uploadFileToFirebaseStorage(file, filePath);
 
@@ -241,6 +242,7 @@ exports.getWorkForCompanyBilling = async (req, res) => {
     return res.status(500).json({ message: "Something went wrong" });
   }
 };
+
 exports.updateUserWorks = async (req, res) => {
   try {
     const { id, wordCount, cost } = req.body;

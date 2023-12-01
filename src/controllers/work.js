@@ -20,10 +20,8 @@ exports.uploadWork = async (req, res) => {
       wordCount = 0;
 
     wordCount = await countWords(file);
-    const date = new Date(Number(req.body.timeStamp));
-    const remoteFileName = `${user.companyName.split(" ").join("_")}/${
-      user.id
-    }/${date}/${req.body.name}`;
+    
+    const remoteFileName = req.body.filePath;
 
     const fileName = file.originalname;
     let size = filesize(file.size, { base: 2, standard: "jedec" });

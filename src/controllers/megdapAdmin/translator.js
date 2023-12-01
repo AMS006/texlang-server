@@ -175,9 +175,10 @@ exports.assignWorkToTranslator = async (req, res) => {
 
    
 
+    const dateInString = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
     works.forEach((work) => {
       const fileDocRef = fileRef.doc(work);
-      batch.update(fileDocRef, { translatorAssigned:true,translatorId: translator,translatorName, assignedOn: new Date() });
+      batch.update(fileDocRef, { translatorAssigned:true,translatorId: translator,translatorName, assignedOn: new Date(dateInString) });
     });
 
     await batch.commit();
@@ -357,7 +358,8 @@ exports.reAssignWork = async(req,res) =>{
 
     if(!fileSnapshot.exists) return res.status(404).json({message:"No File Found"});
 
-    await fileRef.update({translatorId,translatorName, assignedOn: new Date()});
+    const dateInString = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+    await fileRef.update({translatorId,translatorName, assignedOn: new Date(dateInString)});
 
     return res.status(200).json({message:"Work Re Assigned Successfully"});
 

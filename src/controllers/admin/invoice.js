@@ -75,7 +75,8 @@ exports.generateProjectInvoice = async (req, res) => {
     const invoiceData = await projectInvoiceRef.get(); // To get the size of the collection for invoice number
     const num = (invoiceData.size + 1).toString().padStart(5, "0");
     const invoiceNumber = `#TEX${num}`;
-    const invoiceDate = new Date();
+    const invoiceDateInString = new Date().toLocaleString("en-US", {timeZone: "Asia/Kolkata"});
+    const invoiceDate = new Date(invoiceDateInString);
 
     const workRef = db.collection("works").where("projectId", "==", projectId);
     const workData = await workRef.get();

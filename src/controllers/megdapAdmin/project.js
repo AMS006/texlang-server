@@ -42,7 +42,8 @@ exports.updateProjectStatus = async (req, res) => {
     const email = projectData?.user?.email;
 
     const batch = db.batch();
-    const end_date = admin.firestore.FieldValue.serverTimestamp();
+    const dateInString = new Date().toLocaleString("en-US", {timeZone: "Asia/Kolkata"});
+    const end_date = new Date(dateInString);
     batch.update(projectRef, { status: "Completed", end_date });
 
     if (email) {

@@ -38,7 +38,8 @@ exports.addProject = async (req, res) => {
     );
 
     const createdAt = admin.firestore.FieldValue.serverTimestamp();
-    const start_date = new Date();
+    const start_dateInString = new Date().toLocaleString("en-US", {timeZone: "Asia/Kolkata"});
+    const start_date = new Date(start_dateInString);
     const end_date = new Date(start_date);
     end_date.setDate(start_date.getDate() + 2);
 
